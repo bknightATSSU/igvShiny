@@ -529,3 +529,86 @@ Shiny.addCustomMessageHandler("loadCramTrackFromURL",
 
 );
 //------------------------------------------------------------------------------------------------------------------------
+Shiny.addCustomMessageHandler("setCustomGenome",
+
+	function(message){
+		
+         console.log("---- ~/github/igvShiny/inst/htmlwidgets, renderValue");
+         console.log("     el: ");
+         console.log(el);
+         console.log("igv.js renderValue, wh: " + width + ", " + height)
+         console.log("--------- options");
+         console.log(options)
+         var igvDiv;
+         igvDiv = el; // $("#igvDiv")[0];
+         console.log("---- el");
+         console.log(el);
+         console.log(el.id)
+         var htmlContainerID = el.id;
+         //var fullOptions = genomeSpecificOptions(options.genomeName, options.initialLocus,
+         //                                        options.displayMode, parseInt(options.trackHeight),
+         //                                        options.moduleNS)
+		 
+		//fullOptions = JSON.parse("{\n    \"id\": \"\",\n    \"genomeName\": \"\",\n    \"fastaURL\": \"https://storage.googleapis.com/gatk-contrib/VSQV/Cand_auris_B8441.fasta\",\n    \"fastaIndexURL\": \"https://storage.googleapis.com/gatk-contrib/VSQV/Cand_auris_B8441.fasta.fai\",\n    \"chromosomeAliasURL\": null,\n    \"cytobandURL\": null,\n    \"geneAnnotationName\": null,\n    \"geneAnnotationURL\": null,\n    \"geneAnnotationTrackHeight\": 200,\n    \"geneAnnotationTrackColor\": \"darkblue\",\n    \"initialLocus\": \"all\",\n    \"visibilityWindow\": 1000000\n}")
+		 
+		fullOptions = {
+         flanking: 2000,
+		 showKaryo: false,
+         showNavigation: true,
+         minimumBases: 5,
+         showRuler: true,
+		 locus: "all",
+         genome: {id: "caur",
+					name: "Candida auris",
+                    fastaURL: "https://storage.googleapis.com/gatk-contrib/VSQV/Cand_auris_B8441.fasta",
+                    indexURL: "https://storage.googleapis.com/gatk-contrib/VSQV/Cand_auris_B8441.fasta.fai",
+					cytobandURL: null,
+					aliasURL: null
+                    }
+          }; // caur_options
+		 
+         console.log("about to createBrowser, trackHeight: " + fullOptions.height)
+         igv.createBrowser(igvDiv, fullOptions)
+             .then(function (browser) {
+                console.log("createBrowser promise fulfilled");
+                igvWidget = browser;
+				
+                console.log("about to save igv browser");
+                document.getElementById(htmlContainerID).igvBrowser = browser;
+                document.getElementById(htmlContainerID).chromLocString = options.initialLocus;
+                jqueryTag = "#" + htmlContainerID + " .igv-root";
+                console.log("jqueryTag: " + jqueryTag);
+                igvRoots = $(jqueryTag);
+                if(igvRoots.length > 1){
+                   igvRoots[0].remove()
+                   }
+                console.log(" count: " + igvRoots.length);
+                igvWidget.on('locuschange', debounce(function (referenceFrame){
+                   console.log("---- locuschange, referenceFrame: ")
+                   console.log(referenceFrame);
+                   var chromLocString = referenceFrame.label
+                   document.getElementById(htmlContainerID).chromLocString = chromLocString;
+                   var eventName = "currentGenomicRegion." + htmlContainerID
+                   console.log("--- calling Shiny.setInputValue:");
+				   console.log("eventName: " + eventName);
+                   console.log("chromLocString: " + chromLocString);
+                   Shiny.setInputValue(eventName, chromLocString, {priority: "event"});
+                   // var moduleEventName = "igv-currentGenomicRegion." + htmlContainerID.replace("igv-", "");
+                   var moduleEventName = moduleNamespace(options.moduleNS, "currentGenomicRegion.") + htmlContainerID.replace(options.moduleNS, "");
+   		           console.log("moduleEventName: " + moduleEventName);
+                   Shiny.setInputValue(moduleEventName, chromLocString, {priority: "event"});
+                 }, 250, false));
+                igvWidget.on('trackclick', function (track, popoverData){
+                   var x = popoverData;
+                   console.log(x)
+                       // prepend module namespace to support the github/shinyModules/igvModule.R
+                   Shiny.setInputValue(moduleNamespace(options.moduleNS, "trackClick"), x, {priority: "event"})
+                       // for use outside of the ShinyModule idiom
+                   Shiny.setInputValue("trackClick", x, {priority: "event"})
+                   return false; // undefined causes follow on display of standard popup
+                   }); // on
+                Shiny.setInputValue("igvReady", htmlContainerID, {priority: "event"});
+                Shiny.setInputValue(moduleNamespace(options.moduleNS, "igvReady"), htmlContainerID, {priority: "event"});
+                }); // then: promise fulflled
+          }
+)

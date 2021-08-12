@@ -563,4 +563,14 @@ loadCramTrackFromURL <- function(session, id, trackName, cramURL, indexURL, dele
 
 } # loadCramTrack
 #------------------------------------------------------------------------------------------------------------------------
+#'
+#'
+
+setCustomGenome <- function(session, id, fastaURL, fastaIndexURL, initialLocus) 
+{
+   message <- list(elementID=id, fastaURL=fastaURL, fastaIndexURL=fastaIndexURL, initialLocus=initialLocus,
+                   genomeName=genomeName,genomeID=genomeID)
+   
+   session$sendCustomMessage("setCustomGenome", message)
+} # setCustomGenome
 
